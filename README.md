@@ -81,12 +81,10 @@ python md2docx.py .
 ## File Structure
 
 ```
-markdown-converter/
-├── converter.py          # Main conversion script
+md2docx/
+├── md2docx.py          # Main conversion script
 ├── requirements.txt      # Python dependencies
 ├── README.md            # This file
-├── example.md           # Sample markdown file
-└── setup.py             # Installation helper
 ```
 
 ## Dependencies
