@@ -8,7 +8,7 @@ A powerful Python tool that converts markdown files containing mermaid diagrams 
 - **Markdown to Word Conversion**: Seamlessly converts `.md` files to `.docx` format while preserving formatting
 - **Mermaid Diagram Rendering**: Automatically detects and renders mermaid diagrams as high-quality PNG images
 - **Batch Processing**: Processes entire folders of markdown files in one command
-- **Individual File Output**: Creates separate Word documents for each markdown file (not merged)
+- **Flexible Output**: Creates separate Word documents for each file OR combines all into a single document
 - **Smart Formatting**: Maintains heading hierarchy, paragraphs, and text formatting
 
 ### Supported Elements
@@ -46,26 +46,31 @@ playwright install chromium
 
 ## Usage
 
-### Basic Command
+### Basic Commands
 ```bash
+# Convert each markdown file to separate Word documents
 python md2docx.py <folder_path>
+
+# Combine all markdown files into a single Word document
+python md2docx.py -c <folder_path>
 ```
 
 ### Real-World Examples
 
-#### Convert Documentation Folder
+#### Convert Documentation Folder (Separate Files)
 ```bash
 python md2docx.py /Users/john/Documents/project-docs
 ```
 
-#### Convert Book Chapters
+#### Convert Book Chapters (Combined into Single Document)
 ```bash
-python md2docx.py "/Users/jane/Books/my-technical-book"
+python md2docx.py -c "/Users/jane/Books/my-technical-book"
 ```
 
 #### Convert Current Directory
 ```bash
 python md2docx.py .
+python md2docx.py -c .  # Combined version
 ```
 
 ### What Happens During Conversion
@@ -99,16 +104,26 @@ md2docx/
 ## Output Details
 
 ### File Naming Convention
+**Separate Files Mode (default):**
 - Input: `chapter-1.md` → Output: `chapter-1.docx`
 - Input: `README.md` → Output: `README.docx`
 - Input: `technical-spec.md` → Output: `technical-spec.docx`
 
+**Combined Mode (-c flag):**
+- All `.md` files → Output: `combined.docx`
+
 ### Document Structure
-Each generated Word document contains:
+**Separate Files Mode:**
 - **Headings**: Properly formatted with Word's built-in heading styles
 - **Body Text**: Clean paragraph formatting
 - **Images**: Mermaid diagrams embedded as 6-inch wide images
 - **Spacing**: Appropriate line spacing and margins
+
+**Combined Mode:**
+- **File Titles**: Each markdown filename becomes an H1 heading
+- **Content Headings**: Original headings offset by one level (H1→H2, H2→H3, etc.)
+- **Page Breaks**: Automatic separation between different source files
+- **Images**: Mermaid diagrams with unique naming to avoid conflicts
 
 ### Mermaid Diagram Support
 Supported mermaid diagram types:

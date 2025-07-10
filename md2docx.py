@@ -24,6 +24,7 @@ import re
 import os
 import sys
 import glob
+import argparse
 from docx import Document
 from docx.shared import Inches
 import markdown
@@ -109,28 +110,86 @@ class MarkdownToWordConverter:
             if os.path.exists(img):
                 os.remove(img)
     
-    def convert_folder(self, folder_path):
-        """Convert each markdown file in folder to separate Word documents"""
+    def convert_combined(self, md_files, output_file):
+        """Convert multiple markdown files into a single Word document"""
+        doc = Document()
+        
+        for md_file in md_files:
+            with open(md_file, 'r') as f:
+                markdown_text = f.read()
+            
+            # Add file title
+            filename = os.path.splitext(os.path.basename(md_file))[0]
+            doc.add_heading(filename, 1)
+            
+            # Extract and render mermaid diagrams
+            mermaid_diagrams = self.extract_mermaid_diagrams(markdown_text)
+            diagram_images = []
+            
+            for i, diagram in enumerate(mermaid_diagrams):
+                temp_image = f"temp_diagram_{filename}_{i}.png"
+                self.render_mermaid_to_image(diagram, temp_image)
+                diagram_images.append(temp_image)
+            
+            # Remove mermaid blocks from markdown
+            markdown_text = re.sub(r'```mermaid\n.*?\n```', '{{MERMAID_PLACEHOLDER}}', markdown_text, flags=re.DOTALL)
+            
+            # Convert markdown to HTML
+            html = markdown.markdown(markdown_text)
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            # Process HTML elements
+            diagram_index = 0
+            for element in soup.find_all(['h1', 'h2', 'h3', 'p']):
+                if '{{MERMAID_PLACEHOLDER}}' in element.get_text():
+                    if diagram_index < len(diagram_images):
+                        doc.add_picture(diagram_images[diagram_index], width=Inches(6))
+                        diagram_index += 1
+                elif element.name.startswith('h'):
+                    level = int(element.name[1]) + 1  # Offset by 1 since file title is H1
+                    doc.add_heading(element.get_text(), level)
+                else:
+                    doc.add_paragraph(element.get_text())
+            
+            # Cleanup temp files for this file
+            for img in diagram_images:
+                if os.path.exists(img):
+                    os.remove(img)
+            
+            # Add page break between files (except for the last file)
+            if md_file != md_files[-1]:
+                doc.add_page_break()
+        
+        # Save combined document
+        doc.save(output_file)
+    
+    def convert_folder(self, folder_path, combine=False):
+        """Convert markdown files in folder to Word documents"""
         md_files = sorted(glob.glob(os.path.join(folder_path, '*.md')))
         
         if not md_files:
             print("No markdown files found in " + folder_path)
             return
         
-        for md_file in md_files:
-            filename = os.path.splitext(os.path.basename(md_file))[0]
-            output_file = filename + ".docx"
-            self.convert_file(md_file, output_file)
-            print("Converted: " + output_file)
+        if combine:
+            self.convert_combined(md_files, "combined.docx")
+            print("Converted: combined.docx")
+        else:
+            for md_file in md_files:
+                filename = os.path.splitext(os.path.basename(md_file))[0]
+                output_file = filename + ".docx"
+                self.convert_file(md_file, output_file)
+                print("Converted: " + output_file)
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python converter.py <folder_path>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Convert markdown files to Word documents')
+    parser.add_argument('folder_path', help='Path to folder containing markdown files')
+    parser.add_argument('-c', '--combine', action='store_true', help='Combine all markdown files into a single Word document')
     
-    folder_path = sys.argv[1]
+    args = parser.parse_args()
+    
     converter = MarkdownToWordConverter()
-    converter.convert_folder(folder_path)
+    converter.convert_folder(args.folder_path, args.combine)
     print("Conversion completed for all files")
 
 if __name__ == "__main__":
