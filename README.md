@@ -13,16 +13,20 @@ A powerful Python tool that converts markdown files containing mermaid diagrams 
 
 ### Supported Elements
 - Headers (H1-H6) with proper Word styling
-- Paragraphs with text formatting
-- Mermaid diagrams (flowcharts, sequence diagrams, etc.)
-- Code blocks (converted to text)
-- Lists and other markdown elements
+- Paragraphs with text formatting (bold, italic, links, inline code)
+- Unordered and ordered lists (with nesting support)
+- Code blocks with monospace formatting
+- Blockquotes with proper indentation
+- Tables with header formatting
+- Horizontal rules
+- Mermaid diagrams (automatically rendered and extracted)
 
 ## Prerequisites
 
-- **Python 3.6+** (Python 3.8+ recommended)
+- **Python 3.7+** (Python 3.8+ recommended)
 - **Operating System**: macOS, Linux, or Windows
 - **Internet Connection**: Required for downloading mermaid.js during diagram rendering
+- **GUI Support**: For the desktop interface, ensure your system supports Tkinter (usually included with Python)
 
 ## Installation
 
@@ -46,13 +50,87 @@ playwright install chromium
 
 ## Usage
 
-### Basic Commands
+### GUI Interface (Recommended)
+
+The easiest way to use the converters is through the desktop GUI application:
+
+```bash
+# Start the GUI application
+python run_ui.py
+```
+
+This provides a user-friendly desktop interface with:
+
+#### Features:
+- **Tabbed Interface**: Separate tabs for different conversion modes
+- **File Selection**: Easy file and folder selection with visual feedback
+- **Real-time Logging**: Live progress tracking and detailed status information
+- **Batch Processing**: Convert entire folders with mixed file types
+- **Cross-platform**: Works on Windows, macOS, and Linux
+
+#### Interface Tabs:
+
+1. **MD to DOCX Tab**:
+   - Select individual Markdown files or entire folders
+   - Option to combine all files into a single Word document
+   - Visual file list showing selected files
+   - One-click conversion with progress tracking
+
+2. **MMD to Draw.io Tab**:
+   - Select individual Mermaid files or entire folders
+   - Option to combine all diagrams into a single Draw.io file
+   - Support for all mermaid diagram types
+   - Automatic layout and styling
+
+3. **Batch Processing Tab**:
+   - Process entire folders containing both .md and .mmd files
+   - Analyze folders to see available files before processing
+   - Simultaneous conversion of different file types
+   - Perfect for documentation projects with mixed content
+
+4. **Processing Log Tab**:
+   - Real-time conversion progress and status
+   - Detailed error reporting and success confirmations
+   - Save logs to file for debugging
+   - Clear logs between operations
+
+### Web Interface (Alternative)
+
+For browser-based usage, you can also use the web interface:
+
+```bash
+# Start the web application
+python run_web_app.py
+```
+
+**Note**: The desktop GUI (`run_ui.py`) is generally recommended for local use as it provides better file system integration and doesn't require a web server.
+
+### Command Line Interface
+
+For automation and scripting, you can still use the command line:
+
+#### MD2DOCX Commands
 ```bash
 # Convert each markdown file to separate Word documents
 python md2docx.py <folder_path>
 
 # Combine all markdown files into a single Word document
 python md2docx.py -c <folder_path>
+
+# Specify custom output directory
+python md2docx.py -t /custom/output/path <folder_path>
+```
+
+#### MMD2DRAWIO Commands
+```bash
+# Convert each mermaid file to separate Draw.io files
+python mmd2drawio.py <folder_path>
+
+# Combine all mermaid files into a single Draw.io file
+python mmd2drawio.py -c <folder_path>
+
+# Specify custom output directory
+python mmd2drawio.py -o /custom/output/path <folder_path>
 ```
 
 ### Real-World Examples
@@ -87,9 +165,13 @@ python md2docx.py -c .  # Combined version
 
 ```
 md2docx/
-├── md2docx.py          # Main conversion script
-├── requirements.txt      # Python dependencies
-├── README.md            # This file
+├── md2docx.py           # Main Markdown to DOCX conversion script
+├── mmd2drawio.py        # Mermaid to Draw.io converter script
+├── ui_app.py            # Desktop GUI application (main interface)
+├── run_ui.py            # GUI application launcher
+├── run_web_app.py       # Web interface launcher (if available)
+├── requirements.txt     # Python dependencies
+├── README.md           # This documentation
 ```
 
 ## Dependencies
@@ -171,6 +253,105 @@ pip install python-docx
 3. **Convert**: Execute the converter command
 4. **Review**: Check the generated Word documents
 5. **Share**: Distribute the professional `.docx` files
+
+## Mermaid to Draw.io Conversion
+
+The package also includes `mmd2drawio.py` for converting extracted mermaid files to Draw.io format.
+
+### Usage
+
+```bash
+# Convert all .mmd files to separate .drawio files
+python mmd2drawio.py ./docx/
+
+# Combine all .mmd files into a single .drawio file with multiple pages
+python mmd2drawio.py -c ./docx/
+
+# Convert single mermaid file
+python mmd2drawio.py diagram.mmd
+
+# Specify output directory
+python mmd2drawio.py -o ./output/ ./diagrams/
+```
+
+### Complete Workflow
+
+1. **Convert Markdown to Word + Extract Mermaid**:
+   ```bash
+   uv run md2docx.py ./your-docs/
+   ```
+   This creates:
+   - `.docx` files with embedded diagrams
+   - `.mmd` files named as `ch<chapter>_<diagram>.mmd`
+
+2. **Convert Mermaid to Draw.io**:
+   ```bash
+   uv run python mmd2drawio.py ./your-docs/docx/
+   ```
+   This creates:
+   - `.drawio` files for each mermaid diagram
+   - OR combined `.drawio` file with `-c` option
+
+### Supported Mermaid Diagram Types & Notations
+
+#### **Flowcharts** (`graph TD`, `graph LR`, `flowchart`)
+**Node Shapes:**
+- `A[Rectangle]` → Rounded rectangle
+- `A(Round)` → Ellipse/Oval
+- `A{Diamond}` → Diamond/Decision
+- `A[[Subroutine]]` → Rectangle with double border
+- `A[(Database)]` → Cylinder
+- `A((Circle))` → Perfect circle
+- `A>Flag]` → Parallelogram/Flag
+- `A{{Hexagon}}` → Hexagon
+
+**Arrow Types:**
+- `A --> B` → Solid arrow
+- `A -.-> B` → Dotted arrow
+- `A ==> B` → Thick arrow
+- `A --- B` → Line (no arrow)
+- `A -.- B` → Dotted line (no arrow)
+- `A === B` → Thick line (no arrow)
+
+**Edge Labels:**
+- `A -->|Label| B` → Arrow with label
+- `A -.->|Dotted Label| B` → Dotted arrow with label
+
+#### **Sequence Diagrams** (`sequenceDiagram`)
+**Arrow Types:**
+- `A -> B: Message` → Synchronous message (solid)
+- `A ->> B: Message` → Asynchronous message (dashed)
+- `A -.-> B: Message` → Dotted message
+- `A -->> B: Message` → Return message (dashed)
+- `A -x B: Message` → Cross ending
+
+**Participants:**
+- `participant A` → Simple participant
+- `participant A as Actor` → Participant with alias
+- `actor B as User` → Actor type participant
+
+#### **ER Diagrams** (`erDiagram`)
+**Relationship Types:**
+- `USER ||--|| ORDER : places` → One-to-one
+- `USER ||--o{ ORDER : places` → One-to-many
+- `USER }o--|| ORDER : places` → Many-to-one
+- `USER }o--o{ ORDER : places` → Many-to-many
+- `USER ||..|| ORDER : places` → Dotted (identifying)
+
+**Entity Attributes:**
+```
+USER {
+    int id PK
+    string name
+    string email
+}
+```
+
+#### **State Diagrams** (`stateDiagram-v2`)
+**State Transitions:**
+- `[*] --> State1` → Initial state
+- `State1 --> State2: Event` → Labeled transition
+- `State2 --> [*]` → Final state
 
 ## License
 

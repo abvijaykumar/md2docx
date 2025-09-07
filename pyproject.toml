@@ -1,0 +1,13 @@
+[project]
+name = "md2docx"
+version = "0.1.0"
+description = "A powerful Python tool that converts markdown files containing mermaid diagrams into professional Word documents. Perfect for documentation, technical reports, and presentations that need to be shared in Microsoft Word format."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "python-docx",
+    "markdown",
+    "beautifulsoup4",
+    "playwright",
+    "flask>=3.1.2",
+]
