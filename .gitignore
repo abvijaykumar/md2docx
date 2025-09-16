@@ -181,3 +181,4 @@ cython_debug/
 .cursorindexingignore
 *.docx
 .DS_Store
+.DS_Store

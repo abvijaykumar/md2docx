@@ -56,6 +56,9 @@ class MD2DocxUI:
         # Control variables
         self.combine_md_files = tk.BooleanVar(value=False)
         self.combine_mmd_files = tk.BooleanVar(value=False)
+        self.combined_separate_md = tk.BooleanVar(value=False)
+        self.combined_separate_mmd = tk.BooleanVar(value=False)
+        self.selected_combined_files = []
         
         # Create the UI
         self.create_widgets()
@@ -81,6 +84,7 @@ class MD2DocxUI:
         # Create tabs
         self.create_md2docx_tab()
         self.create_mmd2drawio_tab()
+        self.create_combined_tab()
         self.create_batch_tab()
         self.create_log_tab()
         
@@ -205,6 +209,67 @@ class MD2DocxUI:
         
         # Convert button
         ttk.Button(mmd_frame, text="Convert to Draw.io", command=self.convert_mmd_to_drawio,
+                  style='Accent.TButton').pack(pady=20)
+    
+    def create_combined_tab(self):
+        """Create the combined processing tab"""
+        combined_frame = ttk.Frame(self.notebook)
+        self.notebook.add(combined_frame, text="Combined Processing")
+        
+        # Title
+        title_label = ttk.Label(combined_frame, text="Combined MD2DOCX & MMD2DRAWIO Processing", 
+                               font=('TkDefaultFont', 12, 'bold'))
+        title_label.pack(pady=(10, 20))
+        
+        # Input selection frame
+        input_combined_frame = ttk.LabelFrame(combined_frame, text="Input Selection", padding=10)
+        input_combined_frame.pack(fill='x', padx=10, pady=5)
+        
+        # File selection buttons
+        btn_combined_frame = ttk.Frame(input_combined_frame)
+        btn_combined_frame.pack(fill='x', pady=5)
+        
+        ttk.Button(btn_combined_frame, text="Select Markdown Files", 
+                  command=self.select_combined_md_files).pack(side='left', padx=(0, 10))
+        ttk.Button(btn_combined_frame, text="Select Folder", 
+                  command=self.select_combined_folder).pack(side='left', padx=10)
+        ttk.Button(btn_combined_frame, text="Clear Selection", 
+                  command=self.clear_combined_selection).pack(side='left', padx=10)
+        
+        # Selected files display
+        self.combined_files_listbox = tk.Listbox(input_combined_frame, height=6)
+        combined_scrollbar = ttk.Scrollbar(input_combined_frame, orient="vertical")
+        self.combined_files_listbox.config(yscrollcommand=combined_scrollbar.set)
+        combined_scrollbar.config(command=self.combined_files_listbox.yview)
+        
+        self.combined_files_listbox.pack(side="left", fill="both", expand=True, pady=5)
+        combined_scrollbar.pack(side="right", fill="y")
+        
+        # Output settings frame
+        output_combined_frame = ttk.LabelFrame(combined_frame, text="Output Settings", padding=10)
+        output_combined_frame.pack(fill='x', padx=10, pady=5)
+        
+        # Output folder selection
+        folder_combined_frame = ttk.Frame(output_combined_frame)
+        folder_combined_frame.pack(fill='x', pady=5)
+        
+        ttk.Label(folder_combined_frame, text="Output Folder:").pack(side='left')
+        self.combined_output_entry = ttk.Entry(folder_combined_frame, textvariable=self.output_folder, width=60)
+        self.combined_output_entry.pack(side='left', fill='x', expand=True, padx=(10, 5))
+        ttk.Button(folder_combined_frame, text="Browse", 
+                  command=self.select_output_folder).pack(side='right')
+        
+        # Options
+        options_combined_frame = ttk.Frame(output_combined_frame)
+        options_combined_frame.pack(fill='x', pady=5)
+        
+        ttk.Checkbutton(options_combined_frame, text="Create separate DOCX files (unchecked = single combined DOCX)", 
+                       variable=self.combined_separate_md).pack(anchor='w', pady=2)
+        ttk.Checkbutton(options_combined_frame, text="Create separate Draw.io files (unchecked = single combined Draw.io)", 
+                       variable=self.combined_separate_mmd).pack(anchor='w', pady=2)
+        
+        # Convert button
+        ttk.Button(combined_frame, text="Process All Files", command=self.process_combined_files,
                   style='Accent.TButton').pack(pady=20)
     
     def create_batch_tab(self):
@@ -343,6 +408,34 @@ class MD2DocxUI:
         self.update_mmd_listbox()
         self.log_message("Cleared mermaid file selection")
     
+    def select_combined_md_files(self):
+        """Select markdown files for combined processing"""
+        files = filedialog.askopenfilenames(
+            title="Select Markdown Files",
+            filetypes=[("Markdown files", "*.md"), ("All files", "*.*")]
+        )
+        if files:
+            self.selected_combined_files = list(files)
+            self.update_combined_listbox()
+            self.log_message(f"Selected {len(files)} markdown files for combined processing")
+    
+    def select_combined_folder(self):
+        """Select folder for combined processing"""
+        folder = filedialog.askdirectory(title="Select Folder with Markdown Files")
+        if folder:
+            md_files = []
+            for ext in ['*.md']:
+                md_files.extend(Path(folder).glob(ext))
+            self.selected_combined_files = [str(f) for f in sorted(md_files)]
+            self.update_combined_listbox()
+            self.log_message(f"Found {len(self.selected_combined_files)} markdown files for combined processing")
+    
+    def clear_combined_selection(self):
+        """Clear combined file selection"""
+        self.selected_combined_files = []
+        self.update_combined_listbox()
+        self.log_message("Cleared combined file selection")
+    
     def select_output_folder(self):
         """Select output folder"""
         folder = filedialog.askdirectory(title="Select Output Folder")
@@ -369,6 +462,12 @@ class MD2DocxUI:
         self.mmd_files_listbox.delete(0, tk.END)
         for file in self.selected_mmd_files:
             self.mmd_files_listbox.insert(tk.END, os.path.basename(file))
+    
+    def update_combined_listbox(self):
+        """Update combined files listbox"""
+        self.combined_files_listbox.delete(0, tk.END)
+        for file in self.selected_combined_files:
+            self.combined_files_listbox.insert(tk.END, os.path.basename(file))
     
     # Logging methods
     def log_message(self, message):
@@ -572,6 +671,79 @@ class MD2DocxUI:
         except Exception as e:
             self.log_message(f"✗ Error during batch processing: {str(e)}")
             messagebox.showerror("Error", f"Batch processing failed: {str(e)}")
+    
+    def process_combined_files(self):
+        """Process files with both MD2DOCX and MMD2DRAWIO"""
+        if not self.selected_combined_files:
+            messagebox.showwarning("Warning", "Please select markdown files first")
+            return
+        
+        if not self.output_folder.get():
+            messagebox.showwarning("Warning", "Please select an output folder")
+            return
+        
+        # Set up converters with logging
+        self.md_converter.log_callback = self.log_message
+        if hasattr(self, 'mmd_converter'):
+            self.mmd_converter.log_callback = self.log_message
+        
+        # Run processing in separate thread
+        thread = threading.Thread(target=self._process_combined_files_thread)
+        thread.daemon = True
+        thread.start()
+    
+    def _process_combined_files_thread(self):
+        """Thread function for combined processing"""
+        try:
+            output_dir = self.output_folder.get()
+            os.makedirs(output_dir, exist_ok=True)
+            
+            self.log_message("Starting combined MD2DOCX & MMD2DRAWIO processing...")
+            
+            # Process DOCX conversion
+            if self.combined_separate_md.get():
+                # Separate DOCX files
+                for i, md_file in enumerate(self.selected_combined_files, 1):
+                    filename = os.path.splitext(os.path.basename(md_file))[0]
+                    output_file = os.path.join(output_dir, f"{filename}.docx")
+                    self.log_message(f"Converting DOCX {i}/{len(self.selected_combined_files)}: {os.path.basename(md_file)}")
+                    self.md_converter.convert_file(md_file, output_file, i)
+                    self.log_message(f"✓ Created DOCX: {output_file}")
+            else:
+                # Combined DOCX file
+                output_file = os.path.join(output_dir, "combined.docx")
+                self.log_message("Converting all files to single DOCX document...")
+                self.md_converter.convert_combined(self.selected_combined_files, output_file)
+                self.log_message(f"✓ Created combined DOCX: {output_file}")
+            
+            # Extract and process MMD files
+            mmd_files = []
+            for ext in ['*.mmd']:
+                mmd_files.extend(Path(output_dir).glob(ext))
+            
+            if mmd_files and hasattr(self, 'mmd_converter'):
+                self.log_message(f"Found {len(mmd_files)} mermaid files to convert to Draw.io")
+                
+                if self.combined_separate_mmd.get():
+                    # Separate Draw.io files
+                    for i, mmd_file in enumerate(mmd_files, 1):
+                        filename = os.path.splitext(os.path.basename(mmd_file))[0]
+                        drawio_file = os.path.join(output_dir, f"{filename}.drawio")
+                        self.log_message(f"Converting Draw.io {i}/{len(mmd_files)}: {os.path.basename(mmd_file)}")
+                        self.mmd_converter.convert_single_file(str(mmd_file), drawio_file)
+                        self.log_message(f"✓ Created Draw.io: {drawio_file}")
+                else:
+                    # Combined Draw.io file
+                    drawio_file = os.path.join(output_dir, "combined.drawio")
+                    self.log_message("Converting all mermaid files to single Draw.io file...")
+                    self.mmd_converter.convert_multiple_files([str(f) for f in mmd_files], drawio_file)
+                    self.log_message(f"✓ Created combined Draw.io: {drawio_file}")
+            
+            self.log_message("✓ Combined processing completed successfully!")
+            
+        except Exception as e:
+            self.log_message(f"✗ Error during combined processing: {str(e)}")
+            messagebox.showerror("Error", f"Combined processing failed: {str(e)}")
 
 def main():
     """Main application entry point"""
