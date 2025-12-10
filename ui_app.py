@@ -32,6 +32,7 @@ from pathlib import Path
 try:
     from md2docx import MarkdownToWordConverter
     from mmd2drawio import MermaidToDrawioConverter
+    from docx2md import DocxToMarkdownConverter, EnhancedDocxToMarkdownConverter
 except ImportError as e:
     messagebox.showerror("Import Error", f"Failed to import converters: {e}")
     sys.exit(1)
@@ -46,18 +47,30 @@ class MD2DocxUI:
         # Initialize converters
         self.md_converter = MarkdownToWordConverter()
         self.mmd_converter = MermaidToDrawioConverter()
+        self.docx_converter = DocxToMarkdownConverter()  # Legacy for backward compatibility
+        self.enhanced_docx_converter = None  # Will be created with user config
         
         # Variables for file/folder paths
         self.selected_md_files = []
         self.selected_mmd_files = []
+        self.selected_docx_files = []
         self.input_folder = tk.StringVar()
         self.output_folder = tk.StringVar()
         
         # Control variables
         self.combine_md_files = tk.BooleanVar(value=False)
         self.combine_mmd_files = tk.BooleanVar(value=False)
+        self.combine_docx_files = tk.BooleanVar(value=False)
         self.combined_separate_md = tk.BooleanVar(value=False)
         self.combined_separate_mmd = tk.BooleanVar(value=False)
+        
+        # Enhanced DOCX to MD options
+        self.docx_extract_images = tk.BooleanVar(value=True)
+        self.docx_preserve_formatting = tk.BooleanVar(value=True)
+        self.docx_table_alignment = tk.BooleanVar(value=True)
+        self.docx_extract_hyperlinks = tk.BooleanVar(value=True)
+        self.docx_include_metadata = tk.BooleanVar(value=True)
+        self.docx_image_folder = tk.StringVar(value="assets")
         self.selected_combined_files = []
         
         # Create the UI
@@ -84,6 +97,7 @@ class MD2DocxUI:
         # Create tabs
         self.create_md2docx_tab()
         self.create_mmd2drawio_tab()
+        self.create_docx2md_tab()
         self.create_combined_tab()
         self.create_batch_tab()
         self.create_log_tab()
@@ -209,6 +223,97 @@ class MD2DocxUI:
         
         # Convert button
         ttk.Button(mmd_frame, text="Convert to Draw.io", command=self.convert_mmd_to_drawio,
+                  style='Accent.TButton').pack(pady=20)
+    
+    def create_docx2md_tab(self):
+        """Create the DOCX2MD converter tab"""
+        docx_frame = ttk.Frame(self.notebook)
+        self.notebook.add(docx_frame, text="DOCX to MD")
+        
+        # Title
+        title_label = ttk.Label(docx_frame, text="Word Document to Markdown Converter", 
+                               font=('TkDefaultFont', 12, 'bold'))
+        title_label.pack(pady=(10, 20))
+        
+        # Input selection frame
+        input_frame3 = ttk.LabelFrame(docx_frame, text="Input Selection", padding=10)
+        input_frame3.pack(fill='x', padx=10, pady=5)
+        
+        # File selection buttons
+        btn_frame3 = ttk.Frame(input_frame3)
+        btn_frame3.pack(fill='x', pady=5)
+        
+        ttk.Button(btn_frame3, text="Select DOCX Files", 
+                  command=self.select_docx_files).pack(side='left', padx=(0, 10))
+        ttk.Button(btn_frame3, text="Select Folder", 
+                  command=self.select_docx_folder).pack(side='left', padx=10)
+        ttk.Button(btn_frame3, text="Clear Selection", 
+                  command=self.clear_docx_selection).pack(side='left', padx=10)
+        
+        # Selected files display
+        self.docx_files_listbox = tk.Listbox(input_frame3, height=6)
+        docx_scrollbar = ttk.Scrollbar(input_frame3, orient="vertical")
+        self.docx_files_listbox.config(yscrollcommand=docx_scrollbar.set)
+        docx_scrollbar.config(command=self.docx_files_listbox.yview)
+        
+        self.docx_files_listbox.pack(side="left", fill="both", expand=True, pady=5)
+        docx_scrollbar.pack(side="right", fill="y")
+        
+        # Output settings frame
+        output_frame3 = ttk.LabelFrame(docx_frame, text="Output Settings", padding=10)
+        output_frame3.pack(fill='x', padx=10, pady=5)
+        
+        # Output folder selection
+        folder_frame3 = ttk.Frame(output_frame3)
+        folder_frame3.pack(fill='x', pady=5)
+        
+        ttk.Label(folder_frame3, text="Output Folder:").pack(side='left')
+        self.docx_output_entry = ttk.Entry(folder_frame3, textvariable=self.output_folder, width=60)
+        self.docx_output_entry.pack(side='left', fill='x', expand=True, padx=(10, 5))
+        ttk.Button(folder_frame3, text="Browse", 
+                  command=self.select_output_folder).pack(side='right')
+        
+        # Options
+        options_frame3 = ttk.Frame(output_frame3)
+        options_frame3.pack(fill='x', pady=5)
+        
+        ttk.Checkbutton(options_frame3, text="Combine all files into single markdown",
+                       variable=self.combine_docx_files).pack(anchor='w')
+        
+        # Enhanced features frame
+        features_frame = ttk.LabelFrame(docx_frame, text="Enhanced Features", padding=10)
+        features_frame.pack(fill='x', padx=10, pady=5)
+        
+        # First row of options
+        features_row1 = ttk.Frame(features_frame)
+        features_row1.pack(fill='x', pady=2)
+        
+        ttk.Checkbutton(features_row1, text="Extract images",
+                       variable=self.docx_extract_images).pack(side='left', padx=(0, 20))
+        ttk.Checkbutton(features_row1, text="Preserve formatting",
+                       variable=self.docx_preserve_formatting).pack(side='left', padx=(0, 20))
+        ttk.Checkbutton(features_row1, text="Table alignment",
+                       variable=self.docx_table_alignment).pack(side='left')
+        
+        # Second row of options
+        features_row2 = ttk.Frame(features_frame)
+        features_row2.pack(fill='x', pady=2)
+        
+        ttk.Checkbutton(features_row2, text="Extract hyperlinks",
+                       variable=self.docx_extract_hyperlinks).pack(side='left', padx=(0, 20))
+        ttk.Checkbutton(features_row2, text="Include metadata",
+                       variable=self.docx_include_metadata).pack(side='left', padx=(0, 20))
+        
+        # Image folder setting
+        image_folder_frame = ttk.Frame(features_frame)
+        image_folder_frame.pack(fill='x', pady=5)
+        
+        ttk.Label(image_folder_frame, text="Image folder name:").pack(side='left')
+        image_folder_entry = ttk.Entry(image_folder_frame, textvariable=self.docx_image_folder, width=15)
+        image_folder_entry.pack(side='left', padx=(10, 0))
+        
+        # Convert button
+        ttk.Button(docx_frame, text="Convert to Markdown", command=self.convert_docx_to_md,
                   style='Accent.TButton').pack(pady=20)
     
     def create_combined_tab(self):
@@ -408,6 +513,34 @@ class MD2DocxUI:
         self.update_mmd_listbox()
         self.log_message("Cleared mermaid file selection")
     
+    def select_docx_files(self):
+        """Select DOCX files"""
+        files = filedialog.askopenfilenames(
+            title="Select DOCX Files",
+            filetypes=[("Word documents", "*.docx"), ("All files", "*.*")]
+        )
+        if files:
+            self.selected_docx_files = list(files)
+            self.update_docx_listbox()
+            self.log_message(f"Selected {len(files)} DOCX files")
+    
+    def select_docx_folder(self):
+        """Select folder containing DOCX files"""
+        folder = filedialog.askdirectory(title="Select Folder with DOCX Files")
+        if folder:
+            docx_files = []
+            for ext in ['*.docx']:
+                docx_files.extend(Path(folder).glob(ext))
+            self.selected_docx_files = [str(f) for f in sorted(docx_files)]
+            self.update_docx_listbox()
+            self.log_message(f"Found {len(self.selected_docx_files)} DOCX files in {folder}")
+    
+    def clear_docx_selection(self):
+        """Clear DOCX file selection"""
+        self.selected_docx_files = []
+        self.update_docx_listbox()
+        self.log_message("Cleared DOCX file selection")
+    
     def select_combined_md_files(self):
         """Select markdown files for combined processing"""
         files = filedialog.askopenfilenames(
@@ -468,6 +601,12 @@ class MD2DocxUI:
         self.combined_files_listbox.delete(0, tk.END)
         for file in self.selected_combined_files:
             self.combined_files_listbox.insert(tk.END, os.path.basename(file))
+    
+    def update_docx_listbox(self):
+        """Update DOCX files listbox"""
+        self.docx_files_listbox.delete(0, tk.END)
+        for file in self.selected_docx_files:
+            self.docx_files_listbox.insert(tk.END, os.path.basename(file))
     
     # Logging methods
     def log_message(self, message):
@@ -594,6 +733,84 @@ class MD2DocxUI:
             self.log_message(f"✗ Error during conversion: {str(e)}")
             messagebox.showerror("Error", f"Conversion failed: {str(e)}")
     
+    def convert_docx_to_md(self):
+        """Convert DOCX files to markdown"""
+        if not self.selected_docx_files:
+            messagebox.showwarning("Warning", "Please select DOCX files first")
+            return
+        
+        if not self.output_folder.get():
+            messagebox.showwarning("Warning", "Please select an output folder")
+            return
+        
+        # Create enhanced converter with user configuration
+        config = {
+            'extract_images': self.docx_extract_images.get(),
+            'image_folder': self.docx_image_folder.get(),
+            'preserve_formatting': self.docx_preserve_formatting.get(),
+            'table_alignment': self.docx_table_alignment.get(),
+            'extract_hyperlinks': self.docx_extract_hyperlinks.get(),
+            'include_metadata': self.docx_include_metadata.get(),
+            'heading_detection_method': 'advanced',
+            'output_format': 'github'
+        }
+        
+        self.enhanced_docx_converter = EnhancedDocxToMarkdownConverter(config)
+        self.enhanced_docx_converter.log_callback = self.log_message
+        
+        # Run conversion in separate thread to prevent UI freezing
+        thread = threading.Thread(target=self._convert_docx_to_md_thread)
+        thread.daemon = True
+        thread.start()
+    
+    def _convert_docx_to_md_thread(self):
+        """Thread function for DOCX to MD conversion"""
+        try:
+            output_dir = self.output_folder.get()
+            os.makedirs(output_dir, exist_ok=True)
+            
+            self.log_message("Starting enhanced DOCX to Markdown conversion...")
+            
+            # Show configuration being used
+            config_msg = "Configuration: "
+            config_details = []
+            if self.docx_extract_images.get():
+                config_details.append(f"images→{self.docx_image_folder.get()}")
+            if self.docx_preserve_formatting.get():
+                config_details.append("formatting")
+            if self.docx_table_alignment.get():
+                config_details.append("tables")
+            if self.docx_extract_hyperlinks.get():
+                config_details.append("hyperlinks")
+            if self.docx_include_metadata.get():
+                config_details.append("metadata")
+            
+            if config_details:
+                config_msg += ", ".join(config_details)
+                self.log_message(config_msg)
+            
+            if self.combine_docx_files.get():
+                # Combine all files into single document
+                output_file = os.path.join(output_dir, "combined.md")
+                self.log_message("Converting all files to single markdown...")
+                self.enhanced_docx_converter.convert_combined(self.selected_docx_files, output_file)
+                self.log_message(f"✓ Created combined markdown: {output_file}")
+            else:
+                # Convert each file separately
+                for i, docx_file in enumerate(self.selected_docx_files, 1):
+                    filename = os.path.splitext(os.path.basename(docx_file))[0]
+                    output_file = os.path.join(output_dir, f"{filename}.md")
+                    
+                    self.log_message(f"Converting {i}/{len(self.selected_docx_files)}: {os.path.basename(docx_file)}")
+                    self.enhanced_docx_converter.convert_file(docx_file, output_file)
+                    self.log_message(f"✓ Created: {output_file}")
+            
+            self.log_message("✓ Enhanced DOCX to Markdown conversion completed successfully!")
+            
+        except Exception as e:
+            self.log_message(f"✗ Error during conversion: {str(e)}")
+            messagebox.showerror("Error", f"Conversion failed: {str(e)}")
+    
     def analyze_batch_folder(self):
         """Analyze batch folder for available files"""
         if not self.input_folder.get():
@@ -619,14 +836,22 @@ class MD2DocxUI:
         for f in mmd_files:
             self.log_message(f"  - {f.name}")
         
+        # Find DOCX files
+        docx_files = list(Path(folder).glob("*.docx"))
+        self.log_message(f"Found {len(docx_files)} DOCX files:")
+        for f in docx_files:
+            self.log_message(f"  - {f.name}")
+        
         # Update selections
         self.selected_md_files = [str(f) for f in sorted(md_files)]
         self.selected_mmd_files = [str(f) for f in sorted(mmd_files)]
+        self.selected_docx_files = [str(f) for f in sorted(docx_files)]
         self.update_md_listbox()
         self.update_mmd_listbox()
+        self.update_docx_listbox()
         
-        if not md_files and not mmd_files:
-            self.log_message("No markdown or mermaid files found in the selected folder")
+        if not md_files and not mmd_files and not docx_files:
+            self.log_message("No markdown, mermaid, or DOCX files found in the selected folder")
         else:
             self.log_message("✓ Folder analysis complete. Files loaded in respective tabs.")
     

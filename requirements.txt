@@ -1,6 +1,0 @@
-python-docx
-markdown
-beautifulsoup4
-playwright
-flask
-pathlib

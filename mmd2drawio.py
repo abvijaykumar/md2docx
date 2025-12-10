@@ -57,56 +57,62 @@ class MermaidToDrawioConverter:
     
     def parse_node_shape(self, node_text):
         """Parse node shape and return appropriate Draw.io style"""
+        base_style = "whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;"
+        
         # Handle different node shapes with proper precedence (longer patterns first)
         if node_text.startswith('[[') and node_text.endswith(']]'):
             # Subroutine: A[[text]]
-            return node_text[2:-2], "rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;"
+            return node_text[2:-2], f"rounded=1;strokeWidth=2;{base_style}"
         elif node_text.startswith('{{') and node_text.endswith('}}'):
             # Hexagon: A{{text}}
-            return node_text[2:-2], "shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;"
+            return node_text[2:-2], f"shape=hexagon;perimeter=hexagonPerimeter2;fillColor=#fff2cc;strokeColor=#d6b656;{base_style}"
         elif node_text.startswith('((') and node_text.endswith('))'):
             # Circle: A((text))
-            return node_text[2:-2], "ellipse;whiteSpace=wrap;html=1;aspect=fixed;"
+            return node_text[2:-2], f"ellipse;aspect=fixed;fillColor=#f8cecc;strokeColor=#b85450;{base_style}"
         elif node_text.startswith('[(') and node_text.endswith(')]'):
             # Database: A[(text)]
-            return node_text[2:-2], "shape=cylinder3;whiteSpace=wrap;html=1;"
+            return node_text[2:-2], f"shape=cylinder3;fillColor=#e1d5e7;strokeColor=#9673a6;{base_style}"
         elif node_text.startswith('>') and node_text.endswith(']'):
             # Flag: A>text]
-            return node_text[1:-1], "shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;"
+            return node_text[1:-1], f"shape=parallelogram;perimeter=parallelogramPerimeter;fillColor=#d5e8d4;strokeColor=#82b366;{base_style}"
         elif node_text.startswith('[') and node_text.endswith(']'):
             # Rectangle: A[text] (must come after other bracket types)
-            return node_text[1:-1], "rounded=1;whiteSpace=wrap;html=1;"
+            return node_text[1:-1], f"rounded=1;{base_style}"
         elif node_text.startswith('(') and node_text.endswith(')'):
             # Round node: A(text) (must come after double parentheses)
-            return node_text[1:-1], "ellipse;whiteSpace=wrap;html=1;"
+            return node_text[1:-1], f"ellipse;fillColor=#ffe6cc;strokeColor=#d79b00;{base_style}"
         elif node_text.startswith('{') and node_text.endswith('}'):
             # Diamond/Decision: A{text} (must come after double braces)
-            return node_text[1:-1], "rhombus;whiteSpace=wrap;html=1;"
+            return node_text[1:-1], f"rhombus;fillColor=#fff2cc;strokeColor=#d6b656;{base_style}"
         else:
             # Default rectangle
-            return node_text, "rounded=1;whiteSpace=wrap;html=1;"
+            return node_text, f"rounded=1;{base_style}"
     
     def parse_arrow_type(self, arrow_text):
         """Parse arrow type and return Draw.io style"""
-        style = "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;"
+        style = "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;"
         
         # Dotted/Dashed arrows
         if '.-' in arrow_text or '..' in arrow_text:
-            style += "dashed=1;"
+            style += "dashed=1;dashPattern=5 5;"
         
         # Thick arrows
         if '==' in arrow_text:
             style += "strokeWidth=3;"
+        else:
+            style += "strokeWidth=2;"
         
         # Arrow head types
         if arrow_text.endswith('->'):
-            style += "endArrow=classic;"
+            style += "endArrow=classic;endFill=1;"
         elif arrow_text.endswith('-'):
             style += "endArrow=none;"
         elif arrow_text.endswith('o'):
-            style += "endArrow=oval;"
+            style += "endArrow=oval;endFill=0;"
         elif arrow_text.endswith('x'):
-            style += "endArrow=cross;"
+            style += "endArrow=cross;endFill=1;"
+        else:
+            style += "endArrow=classic;endFill=1;"
         
         return style
     
@@ -117,9 +123,21 @@ class MermaidToDrawioConverter:
         
         lines = mermaid_text.strip().split('\n')
         
+        # Detect flow direction
+        self.flow_direction = 'TD'  # Default
         for line in lines:
             line = line.strip()
-            if not line or line.startswith('graph') or line.startswith('flowchart'):
+            if line.startswith('graph') or line.startswith('flowchart'):
+                if 'LR' in line:
+                    self.flow_direction = 'LR'
+                elif 'RL' in line:
+                    self.flow_direction = 'RL'
+                elif 'BT' in line:
+                    self.flow_direction = 'BT'
+                else:
+                    self.flow_direction = 'TD'
+                continue
+            if not line:
                 continue
             
             # Handle mermaid format: A -->|label| B by converting to A --> B |label|
@@ -527,74 +545,181 @@ class MermaidToDrawioConverter:
         
         return cell
     
-    def calculate_positions(self, nodes, diagram_type='flowchart'):
-        """Calculate positions for nodes based on diagram type"""
+    def calculate_positions(self, nodes, edges=None, diagram_type='flowchart'):
+        """Calculate positions for nodes based on diagram type and connections"""
         positions = {}
         node_list = list(nodes.keys())
         
         if diagram_type == 'sequence':
             # Arrange participants horizontally
-            x_start = 50
-            y_pos = 50
-            x_spacing = 200
+            x_start = 100
+            y_pos = 80
+            x_spacing = 250
             
             for i, node in enumerate(node_list):
                 positions[nodes[node]['id']] = {
                     'x': x_start + (i * x_spacing),
                     'y': y_pos,
-                    'width': 150,
-                    'height': 60
-                }
-        
-        elif diagram_type == 'er':
-            # Arrange entities in a grid
-            cols = math.ceil(math.sqrt(len(node_list)))
-            x_spacing = 250
-            y_spacing = 200
-            
-            for i, node in enumerate(node_list):
-                row = i // cols
-                col = i % cols
-                positions[nodes[node]['id']] = {
-                    'x': 50 + (col * x_spacing),
-                    'y': 50 + (row * y_spacing),
-                    'width': 200,
-                    'height': max(100, 30 + len(nodes[node].get('attributes', [])) * 20)
-                }
-        
-        elif diagram_type == 'state':
-            # Arrange states in a flow-like layout
-            cols = min(3, len(node_list))  # Max 3 columns for better flow
-            x_spacing = 200
-            y_spacing = 150
-            
-            for i, node in enumerate(node_list):
-                row = i // cols
-                col = i % cols
-                positions[nodes[node]['id']] = {
-                    'x': 50 + (col * x_spacing),
-                    'y': 50 + (row * y_spacing),
-                    'width': 150,
-                    'height': 70
-                }
-        
-        else:  # flowchart
-            # Simple grid layout
-            cols = math.ceil(math.sqrt(len(node_list)))
-            x_spacing = 200
-            y_spacing = 150
-            
-            for i, node in enumerate(node_list):
-                row = i // cols
-                col = i % cols
-                positions[nodes[node]['id']] = {
-                    'x': 50 + (col * x_spacing),
-                    'y': 50 + (row * y_spacing),
-                    'width': 150,
+                    'width': 180,
                     'height': 80
                 }
         
+        elif diagram_type == 'er':
+            # Arrange entities in a grid with better spacing
+            cols = max(2, min(4, math.ceil(math.sqrt(len(node_list)))))
+            x_spacing = 300
+            y_spacing = 250
+            
+            for i, node in enumerate(node_list):
+                row = i // cols
+                col = i % cols
+                positions[nodes[node]['id']] = {
+                    'x': 100 + (col * x_spacing),
+                    'y': 100 + (row * y_spacing),
+                    'width': 220,
+                    'height': max(120, 50 + len(nodes[node].get('attributes', [])) * 25)
+                }
+        
+        elif diagram_type == 'state':
+            # Arrange states in a flow-like layout with better spacing
+            cols = min(4, max(2, len(node_list)))
+            x_spacing = 250
+            y_spacing = 180
+            
+            for i, node in enumerate(node_list):
+                row = i // cols
+                col = i % cols
+                positions[nodes[node]['id']] = {
+                    'x': 100 + (col * x_spacing),
+                    'y': 100 + (row * y_spacing),
+                    'width': 180,
+                    'height': 90
+                }
+        
+        else:  # flowchart - improved layout
+            # Try to create a more logical flow layout
+            if edges and len(edges) > 0:
+                # Use a simple hierarchical layout based on connections
+                levels = self._calculate_node_levels(nodes, edges)
+                positions = self._layout_by_levels(nodes, levels)
+            else:
+                # Fallback to grid layout with better spacing
+                cols = max(2, min(5, math.ceil(math.sqrt(len(node_list)))))
+                x_spacing = 280
+                y_spacing = 180
+                
+                for i, node in enumerate(node_list):
+                    row = i // cols
+                    col = i % cols
+                    positions[nodes[node]['id']] = {
+                        'x': 100 + (col * x_spacing),
+                        'y': 100 + (row * y_spacing),
+                        'width': 200,
+                        'height': 100
+                    }
+        
         return positions
+    
+    def _calculate_node_levels(self, nodes, edges):
+        """Calculate hierarchical levels using topological sort"""
+        # Build adjacency lists
+        graph = {node_data['id']: [] for node_data in nodes.values()}
+        in_degree = {node_data['id']: 0 for node_data in nodes.values()}
+        
+        for edge in edges:
+            graph[edge['from']].append(edge['to'])
+            in_degree[edge['to']] += 1
+        
+        # Topological sort with level assignment
+        levels = {}
+        queue = [node_id for node_id, degree in in_degree.items() if degree == 0]
+        current_level = 0
+        
+        while queue:
+            next_queue = []
+            
+            # Process all nodes at current level
+            for node_id in queue:
+                levels[node_id] = current_level
+                
+                # Reduce in-degree of neighbors
+                for neighbor in graph[node_id]:
+                    in_degree[neighbor] -= 1
+                    if in_degree[neighbor] == 0:
+                        next_queue.append(neighbor)
+            
+            queue = next_queue
+            current_level += 1
+        
+        # Handle remaining nodes (cycles or disconnected)
+        for node_id in in_degree:
+            if node_id not in levels:
+                levels[node_id] = current_level
+        
+        return levels
+    
+    def _layout_by_levels(self, nodes, levels):
+        """Layout nodes by hierarchical levels with proper flow direction"""
+        positions = {}
+        
+        # Group nodes by level
+        level_groups = {}
+        for node_id, level in levels.items():
+            if level not in level_groups:
+                level_groups[level] = []
+            level_groups[level].append(node_id)
+        
+        # Detect flow direction from mermaid syntax
+        flow_direction = self._detect_flow_direction()
+        
+        if flow_direction in ['TD', 'TB']:  # Top to Bottom
+            y_spacing = 180
+            x_spacing = 220
+            start_x = 100
+            start_y = 80
+            
+            for level, node_ids in sorted(level_groups.items()):
+                y_pos = start_y + (level * y_spacing)
+                
+                # Center nodes horizontally
+                total_width = (len(node_ids) - 1) * x_spacing
+                start_x_level = start_x + max(0, (800 - total_width) // 2)
+                
+                for i, node_id in enumerate(node_ids):
+                    positions[node_id] = {
+                        'x': start_x_level + (i * x_spacing),
+                        'y': y_pos,
+                        'width': 180,
+                        'height': 80
+                    }
+        
+        else:  # Left to Right (LR)
+            x_spacing = 220
+            y_spacing = 150
+            start_x = 80
+            start_y = 100
+            
+            for level, node_ids in sorted(level_groups.items()):
+                x_pos = start_x + (level * x_spacing)
+                
+                # Center nodes vertically
+                total_height = (len(node_ids) - 1) * y_spacing
+                start_y_level = start_y + max(0, (600 - total_height) // 2)
+                
+                for i, node_id in enumerate(node_ids):
+                    positions[node_id] = {
+                        'x': x_pos,
+                        'y': start_y_level + (i * y_spacing),
+                        'width': 180,
+                        'height': 80
+                    }
+        
+        return positions
+    
+    def _detect_flow_direction(self):
+        """Detect flow direction from mermaid diagram"""
+        # This would be set during parsing, defaulting to TD
+        return getattr(self, 'flow_direction', 'TD')
     
     def convert_mermaid_to_drawio(self, mermaid_text, diagram_name="Diagram"):
         """Convert mermaid diagram to Draw.io XML"""
@@ -615,7 +740,7 @@ class MermaidToDrawioConverter:
             nodes, edges = self.parse_mermaid_flowchart(mermaid_text)
         
         # Calculate positions
-        positions = self.calculate_positions(nodes, diagram_type)
+        positions = self.calculate_positions(nodes, edges, diagram_type)
         
         # Create Draw.io XML structure
         root = ET.Element('mxfile', host="app.diagrams.net", modified="2024-01-01T00:00:00.000Z", agent="mmd2drawio", etag="generated", version="22.1.0")

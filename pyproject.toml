@@ -4,10 +4,66 @@ version = "0.1.0"
 description = "A powerful Python tool that converts markdown files containing mermaid diagrams into professional Word documents. Perfect for documentation, technical reports, and presentations that need to be shared in Microsoft Word format."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "python-docx",
-    "markdown",
-    "beautifulsoup4",
-    "playwright",
-    "flask>=3.1.2",
+license = {text = "MIT"}
+authors = [
+    {name = "A B Vijay Kumar"}
 ]
+keywords = ["markdown", "word", "docx", "mermaid", "diagrams", "converter", "documentation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Text Processing :: Markup",
+]
+
+dependencies = [
+    "python-docx>=1.1.2",
+    "markdown>=3.7",
+    "beautifulsoup4>=4.12.3",
+    "playwright>=1.48.0",
+    "flask>=3.1.2",
+    "pillow>=11.0.0",
+    "lxml>=5.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "black>=24.10.0",
+    "ruff>=0.8.4",
+]
+
+[project.scripts]
+md2docx = "md2docx:main"
+docx2md = "docx2md:main"
+mmd2drawio = "mmd2drawio:main"
+md2docx-ui = "run_ui:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/md2docx"
+Repository = "https://github.com/yourusername/md2docx"
+Documentation = "https://github.com/yourusername/md2docx#readme"
+Issues = "https://github.com/yourusername/md2docx/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]

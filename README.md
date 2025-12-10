@@ -23,27 +23,53 @@ A powerful Python tool that converts markdown files containing mermaid diagrams 
 
 ## Prerequisites
 
-- **Python 3.7+** (Python 3.8+ recommended)
+- **UV Package Manager**: This project uses UV for dependency management and script execution
+  - Install UV: https://docs.astral.sh/uv/getting-started/installation/
+- **Python 3.12**: Automatically managed by UV (specified in [`.python-version`](.python-version))
 - **Operating System**: macOS, Linux, or Windows
 - **Internet Connection**: Required for downloading mermaid.js during diagram rendering
 - **GUI Support**: For the desktop interface, ensure your system supports Tkinter (usually included with Python)
 
 ## Installation
 
-### Step 1: Clone or Download
+> **Migration Note**: This project has been migrated from pip/virtualenv to UV for improved dependency management and development workflows. If you previously used `pip install -r requirements.txt`, please follow the new UV-based instructions below.
+
+### Step 1: Install UV
+
+If you don't have UV installed, follow the installation guide at https://docs.astral.sh/uv/getting-started/installation/
+
+Quick installation:
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### Step 2: Clone or Download
 ```bash
 git clone <repository-url>
-cd markdown-converter
+cd md2docx
 ```
 
-### Step 2: Install Python Dependencies
+### Step 3: Install Dependencies
 ```bash
-pip install -r requirements.txt
+# Install all project dependencies
+uv sync
+
+# Or install with development dependencies
+uv sync --extra dev
 ```
 
-### Step 3: Install Browser for Diagram Rendering
+UV will automatically:
+- Install Python 3.12 if not present
+- Create a virtual environment
+- Install all required dependencies from [`pyproject.toml`](pyproject.toml)
+
+### Step 4: Install Browser for Diagram Rendering
 ```bash
-playwright install chromium
+uv run playwright install chromium
 ```
 
 **Note**: The chromium browser is used headlessly to render mermaid diagrams. No GUI interaction required.
@@ -56,7 +82,7 @@ The easiest way to use the converters is through the desktop GUI application:
 
 ```bash
 # Start the GUI application
-python run_ui.py
+uv run md2docx-ui
 ```
 
 This provides a user-friendly desktop interface with:
@@ -94,61 +120,58 @@ This provides a user-friendly desktop interface with:
    - Save logs to file for debugging
    - Clear logs between operations
 
-### Web Interface (Alternative)
-
-For browser-based usage, you can also use the web interface:
-
-```bash
-# Start the web application
-python run_web_app.py
-```
-
-**Note**: The desktop GUI (`run_ui.py`) is generally recommended for local use as it provides better file system integration and doesn't require a web server.
+**Note**: The desktop GUI is recommended for local use as it provides better file system integration.
 
 ### Command Line Interface
 
-For automation and scripting, you can still use the command line:
+For automation and scripting, use the command line with UV:
 
 #### MD2DOCX Commands
 ```bash
 # Convert each markdown file to separate Word documents
-python md2docx.py <folder_path>
+uv run md2docx <folder_path>
 
 # Combine all markdown files into a single Word document
-python md2docx.py -c <folder_path>
+uv run md2docx -c <folder_path>
 
 # Specify custom output directory
-python md2docx.py -t /custom/output/path <folder_path>
+uv run md2docx -t /custom/output/path <folder_path>
+```
+
+#### DOCX2MD Commands
+```bash
+# Convert Word documents back to Markdown
+uv run docx2md <folder_path>
 ```
 
 #### MMD2DRAWIO Commands
 ```bash
 # Convert each mermaid file to separate Draw.io files
-python mmd2drawio.py <folder_path>
+uv run mmd2drawio <folder_path>
 
 # Combine all mermaid files into a single Draw.io file
-python mmd2drawio.py -c <folder_path>
+uv run mmd2drawio -c <folder_path>
 
 # Specify custom output directory
-python mmd2drawio.py -o /custom/output/path <folder_path>
+uv run mmd2drawio -o /custom/output/path <folder_path>
 ```
 
 ### Real-World Examples
 
 #### Convert Documentation Folder (Separate Files)
 ```bash
-python md2docx.py /Users/john/Documents/project-docs
+uv run md2docx /Users/john/Documents/project-docs
 ```
 
 #### Convert Book Chapters (Combined into Single Document)
 ```bash
-python md2docx.py -c "/Users/jane/Books/my-technical-book"
+uv run md2docx -c "/Users/jane/Books/my-technical-book"
 ```
 
 #### Convert Current Directory
 ```bash
-python md2docx.py .
-python md2docx.py -c .  # Combined version
+uv run md2docx .
+uv run md2docx -c .  # Combined version
 ```
 
 ### What Happens During Conversion
@@ -166,22 +189,35 @@ python md2docx.py -c .  # Combined version
 ```
 md2docx/
 ├── md2docx.py           # Main Markdown to DOCX conversion script
+├── docx2md.py           # DOCX to Markdown conversion script
 ├── mmd2drawio.py        # Mermaid to Draw.io converter script
 ├── ui_app.py            # Desktop GUI application (main interface)
 ├── run_ui.py            # GUI application launcher
-├── run_web_app.py       # Web interface launcher (if available)
-├── requirements.txt     # Python dependencies
-├── README.md           # This documentation
+├── pyproject.toml       # Project configuration and dependencies
+├── uv.lock              # UV lock file for reproducible builds
+├── .python-version      # Python version specification (3.12)
+├── requirements.txt     # Legacy requirements (for reference)
+├── README.md            # This documentation
 ```
 
 ## Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|----------|
-| python-docx | 0.8.11 | Word document creation |
-| markdown | 3.1.1 | Markdown parsing |
-| beautifulsoup4 | 4.9.3 | HTML processing |
-| playwright | 1.40.0 | Browser automation for diagram rendering |
+All dependencies are managed through UV and defined in [`pyproject.toml`](pyproject.toml):
+
+| Package | Purpose |
+|---------|----------|
+| python-docx | Word document creation and reading |
+| markdown | Markdown parsing |
+| beautifulsoup4 | HTML processing |
+| playwright | Browser automation for diagram rendering |
+| lxml | XML processing |
+
+**Development Dependencies:**
+| Package | Purpose |
+|---------|----------|
+| black | Code formatting |
+| ruff | Fast Python linter |
+| pytest | Testing framework (if applicable) |
 
 ## Output Details
 
@@ -216,13 +252,64 @@ Supported mermaid diagram types:
 - Gantt charts
 - And more!
 
+## Development
+
+This project uses UV for dependency management and development workflows.
+
+### Adding Dependencies
+
+```bash
+# Add a new runtime dependency
+uv add <package-name>
+
+# Add a development dependency
+uv add --dev <package-name>
+```
+
+### Updating Dependencies
+
+```bash
+# Update all dependencies to latest compatible versions
+uv sync
+
+# Update UV lock file
+uv lock --upgrade
+```
+
+### Code Quality
+
+```bash
+# Format code with Black
+uv run black .
+
+# Lint code with Ruff
+uv run ruff check .
+
+# Auto-fix linting issues
+uv run ruff check --fix .
+```
+
+### Running Tests
+
+```bash
+# Run tests (if test suite exists)
+uv run pytest
+
+# Run tests with coverage
+uv run pytest --cov
+```
+
 ## Troubleshooting
 
 ### Common Issues
 
+**"Command not found: uv"**
+- Install UV following the instructions at https://docs.astral.sh/uv/getting-started/installation/
+
 **"No module named 'docx'"**
 ```bash
-pip install python-docx
+# Ensure dependencies are installed
+uv sync
 ```
 
 **"No markdown files found"**
@@ -232,12 +319,16 @@ pip install python-docx
 
 **Mermaid diagrams not rendering**
 - Ensure internet connection is available
-- Check that chromium is installed: `playwright install chromium`
+- Check that chromium is installed: `uv run playwright install chromium`
 - Verify mermaid syntax is correct
 
 **Permission errors**
 - Ensure write permissions in the output directory
 - Run with appropriate user permissions
+
+**Python version mismatch**
+- UV automatically manages Python 3.12 as specified in [`.python-version`](.python-version)
+- Run `uv python list` to see available Python versions
 
 ## Tips
 
@@ -278,7 +369,7 @@ python mmd2drawio.py -o ./output/ ./diagrams/
 
 1. **Convert Markdown to Word + Extract Mermaid**:
    ```bash
-   uv run md2docx.py ./your-docs/
+   uv run md2docx ./your-docs/
    ```
    This creates:
    - `.docx` files with embedded diagrams
@@ -286,7 +377,7 @@ python mmd2drawio.py -o ./output/ ./diagrams/
 
 2. **Convert Mermaid to Draw.io**:
    ```bash
-   uv run python mmd2drawio.py ./your-docs/docx/
+   uv run mmd2drawio ./your-docs/docx/
    ```
    This creates:
    - `.drawio` files for each mermaid diagram
